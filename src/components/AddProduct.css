@@ -1,0 +1,34 @@
+.add-product {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  max-width: 600px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.add-product h2 { margin-bottom: 24px; color: #444; }
+.field { margin-bottom: 18px; display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 600; font-size: 0.9rem; color: #555; }
+.field input, .field textarea, .field select {
+  padding: 10px 14px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: #667eea;
+}
+.error { color: #e53e3e; font-size: 0.82rem; }
+.submit-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+}
+.submit-btn:hover { background: #5a67d8; }
