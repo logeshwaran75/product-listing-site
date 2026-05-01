@@ -17,28 +17,55 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      const url = 'https://opensheet.elk.sh/1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng/Products_Display';
+      const sheetId = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
+      const url = 'https://docs.google.com/spreadsheets/d/'
+        + sheetId
+        + '/gviz/tq?tqx=out:json&sheet=Products_Display&headers=1';
+
       const res = await fetch(url);
-      const data = await res.json();
-      if (!data || data.length === 0) {
+      const text = await res.text();
+
+      const start = text.indexOf('(') + 1;
+      const end = text.lastIndexOf(')');
+      const json = JSON.parse(text.substring(start, end));
+
+      const cols = json.table.cols;
+      const rows = json.table.rows;
+
+      if (!rows || rows.length === 0) {
         setProducts([]);
         setLoading(false);
         return;
       }
-      const parsed = data.map(function(row, i) {
+
+      // Find column indexes dynamically
+      var nameIdx = -1, priceIdx = -1, catIdx = -1, descIdx = -1, seoIdx = -1;
+      cols.forEach(function(col, i) {
+        var label = (col.label || '').toLowerCase().trim();
+        if (label === 'product name') nameIdx = i;
+        else if (label === 'price') priceIdx = i;
+        else if (label === 'category') catIdx = i;
+        else if (label === 'final description') descIdx = i;
+        else if (label === 'seo keywords') seoIdx = i;
+      });
+
+      var parsed = rows.map(function(row, i) {
+        var c = row.c;
         return {
           id: 'row-' + i,
-          name: row['Product Name'] || '',
-          price: row['Price'] || '',
-          category: row['Category'] || '',
-          description: row['Final Description'] || '',
-          seoKeywords: row['SEO Keywords'] || '',
+          name:        (c[nameIdx]  && c[nameIdx].v)  ? String(c[nameIdx].v)  : '',
+          price:       (c[priceIdx] && c[priceIdx].v) ? String(c[priceIdx].v) : '',
+          category:    (c[catIdx]   && c[catIdx].v)   ? String(c[catIdx].v)   : '',
+          description: (c[descIdx]  && c[descIdx].v)  ? String(c[descIdx].v)  : '',
+          seoKeywords: (c[seoIdx]   && c[seoIdx].v)   ? String(c[seoIdx].v)   : '',
           status: 'Published'
         };
       }).filter(function(p) { return p.name !== ''; });
+
       setProducts(parsed);
+
     } catch (err) {
-      setError('Could not load products: ' + err.message);
+      setError('Error: ' + err.message);
     }
     setLoading(false);
   }
@@ -52,8 +79,7 @@ function App() {
       'Price: ' + product.price + '\n' +
       'Category: ' + product.category + '\n' +
       'Status: Pending\n' +
-      'Timestamp: ' + new Date().toLocaleDateString() + '\n\n' +
-      'n8n will auto-detect and send approval email in 1 minute!'
+      'Timestamp: ' + new Date().toLocaleDateString()
     );
     setActiveTab('list');
   }
