@@ -3,93 +3,82 @@ import AddProduct from './components/AddProduct';
 import ProductList from './components/ProductList';
 import './App.css';
 
+const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
+
 function App() {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
-
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-const fetchProducts = async () => {
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError('');
     try {
-      setLoading(true);
-      setError('');
-
-      const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
-      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Products_Display`;
-
-      console.log('Fetching from:', url);
+      const url =
+        'https://docs.google.com/spreadsheets/d/' +
+        SHEET_ID +
+        '/gviz/tq?tqx=out:json&sheet=Products_Display';
 
       const res = await fetch(url, { cache: 'no-store' });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error: ${res.status}`);
-      }
-
       const text = await res.text();
-      console.log('Raw response:', text.substring(0, 200));
 
       const start = text.indexOf('{');
       const end = text.lastIndexOf('}');
-
       if (start === -1 || end === -1) {
-        throw new Error('Invalid response format from Google Sheets');
+        setProducts([]);
+        setLoading(false);
+        return;
       }
 
-      const jsonStr = text.substring(start, end + 1);
-      const json = JSON.parse(jsonStr);
-      const rows = json.table?.rows || [];
+      const json = JSON.parse(text.substring(start, end + 1));
+      const rows = json.table ? json.table.rows : [];
 
-      console.log('Rows found:', rows.length);
+      if (!rows || rows.length === 0) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
 
-      if (rows.length > 0) {
-        const fetched = rows
-          .map((row, i) => ({
-            id: `sheet-${i}`,
-            name:        row.c[0]?.v?.toString() || '',
-            price:       row.c[1]?.v?.toString() || '',
-            category:    row.c[2]?.v?.toString() || '',
-            description: row.c[3]?.v?.toString() || '',
-            seoKeywords: row.c[4]?.v?.toString() || '',
+      const fetched = rows
+        .map(function(row, i) {
+          return {
+            id: 'sheet-' + i,
+            name:        row.c[0] ? String(row.c[0].v || '') : '',
+            price:       row.c[1] ? String(row.c[1].v || '') : '',
+            category:    row.c[2] ? String(row.c[2].v || '') : '',
+            description: row.c[3] ? String(row.c[3].v || '') : '',
+            seoKeywords: row.c[4] ? String(row.c[4].v || '') : '',
             status: 'Published',
             timestamp: new Date().toLocaleString()
-          }))
-          .filter(p => p.name !== '');
+          };
+        })
+        .filter(function(p) { return p.name !== ''; });
 
-        console.log('Products loaded:', fetched.length);
-        setProducts(fetched);
-      } else {
-        console.log('No rows in sheet yet');
-        setProducts([]);
-      }
-
+      setProducts(fetched);
     } catch (err) {
-      console.error('Fetch error details:', err);
-      setError(`Could not load products: ${err.message}`);
-    } finally {
-      setLoading(false);
+      setError('Could not load products. Make sure Google Sheet is public and has data in Products_Display tab.');
     }
+    setLoading(false);
   };
 
-  const addProduct = (product) => {
+  const addProduct = function(product) {
     alert(
-      `✅ Product "${product.name}" received!\n\n` +
-      `Now add this to your Google Sheet (Products tab):\n\n` +
-      `Product Name: ${product.name}\n` +
-      `Features: ${product.features}\n` +
-      `Price: ${product.price}\n` +
-      `Category: ${product.category}\n` +
-      `Status: Pending\n` +
-      `Timestamp: ${new Date().toLocaleDateString()}\n\n` +
-      `After adding, n8n will auto-generate AI description and send approval email!`
+      'Product "' + product.name + '" received!\n\n' +
+      'Now add this to your Google Sheet (Products tab):\n\n' +
+      'Product Name: ' + product.name + '\n' +
+      'Features: ' + product.features + '\n' +
+      'Price: ' + product.price + '\n' +
+      'Category: ' + product.category + '\n' +
+      'Status: Pending\n' +
+      'Timestamp: ' + new Date().toLocaleDateString() + '\n\n' +
+      'n8n will auto-detect the new row and send approval email!'
     );
     setActiveTab('list');
-    setTimeout(() => fetchProducts(), 2000);
   };
 
   return (
@@ -102,16 +91,16 @@ const fetchProducts = async () => {
       <nav className="nav">
         <button
           className={activeTab === 'list' ? 'active' : ''}
-          onClick={() => {
+          onClick={function() {
             setActiveTab('list');
             fetchProducts();
           }}
         >
-          📋 View Products {loading && '⏳'}
+          📋 View Products {loading ? '⏳' : ''}
         </button>
         <button
           className={activeTab === 'add' ? 'active' : ''}
-          onClick={() => setActiveTab('add')}
+          onClick={function() { setActiveTab('add'); }}
         >
           ➕ Add Product
         </button>
@@ -119,9 +108,7 @@ const fetchProducts = async () => {
 
       <main className="main">
         {error && (
-          <div className="error-banner">
-            ⚠️ {error}
-          </div>
+          <div className="error-banner">⚠️ {error}</div>
         )}
         {activeTab === 'add' ? (
           <AddProduct onAdd={addProduct} />
