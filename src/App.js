@@ -3,8 +3,6 @@ import AddProduct from './components/AddProduct';
 import ProductList from './components/ProductList';
 import './App.css';
 
-const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
-
 function App() {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('list');
@@ -21,7 +19,7 @@ function App() {
     try {
       const url =
         'https://docs.google.com/spreadsheets/d/' +
-        SHEET_ID +
+        '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng' +
         '/gviz/tq?tqx=out:json&sheet=Products_Display';
 
       const res = await fetch(url, { cache: 'no-store' });
@@ -29,6 +27,7 @@ function App() {
 
       const start = text.indexOf('{');
       const end = text.lastIndexOf('}');
+
       if (start === -1 || end === -1) {
         setProducts([]);
         setLoading(false);
@@ -60,8 +59,12 @@ function App() {
         .filter(function(p) { return p.name !== ''; });
 
       setProducts(fetched);
+
     } catch (err) {
-      setError('Could not load products. Make sure Google Sheet is public and has data in Products_Display tab.');
+      setError(
+        'Could not load products. ' +
+        'Make sure Google Sheet is public and Products_Display tab has data.'
+      );
     }
     setLoading(false);
   };
@@ -76,7 +79,7 @@ function App() {
       'Category: ' + product.category + '\n' +
       'Status: Pending\n' +
       'Timestamp: ' + new Date().toLocaleDateString() + '\n\n' +
-      'n8n will auto-detect the new row and send approval email!'
+      'n8n will auto-detect the new row in 1 minute and send approval email!'
     );
     setActiveTab('list');
   };
@@ -108,7 +111,9 @@ function App() {
 
       <main className="main">
         {error && (
-          <div className="error-banner">⚠️ {error}</div>
+          <div className="error-banner">
+            ⚠️ {error}
+          </div>
         )}
         {activeTab === 'add' ? (
           <AddProduct onAdd={addProduct} />
