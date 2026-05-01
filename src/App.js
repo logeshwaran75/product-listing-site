@@ -15,22 +15,37 @@ function App() {
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
+const fetchProducts = async () => {
     try {
       setLoading(true);
       setError('');
 
+      const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Products_Display`;
 
-      const res = await fetch(url);
-      const text = await res.text();
+      console.log('Fetching from:', url);
 
-      // Clean Google's weird response wrapper format
+      const res = await fetch(url, { cache: 'no-store' });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error: ${res.status}`);
+      }
+
+      const text = await res.text();
+      console.log('Raw response:', text.substring(0, 200));
+
       const start = text.indexOf('{');
       const end = text.lastIndexOf('}');
+
+      if (start === -1 || end === -1) {
+        throw new Error('Invalid response format from Google Sheets');
+      }
+
       const jsonStr = text.substring(start, end + 1);
       const json = JSON.parse(jsonStr);
       const rows = json.table?.rows || [];
+
+      console.log('Rows found:', rows.length);
 
       if (rows.length > 0) {
         const fetched = rows
@@ -46,14 +61,16 @@ function App() {
           }))
           .filter(p => p.name !== '');
 
+        console.log('Products loaded:', fetched.length);
         setProducts(fetched);
       } else {
+        console.log('No rows in sheet yet');
         setProducts([]);
       }
 
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Could not load products. Make sure Google Sheet is public and has data.');
+      console.error('Fetch error details:', err);
+      setError(`Could not load products: ${err.message}`);
     } finally {
       setLoading(false);
     }
