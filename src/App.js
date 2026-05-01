@@ -3,31 +3,35 @@ import AddProduct from './components/AddProduct';
 import ProductList from './components/ProductList';
 import './App.css';
 
-const SHEET_ID = process.env.REACT_APP_SHEET_ID;
+const SHEET_ID = '1BHqMHAfaRltJqL4qZJssDk4Al7hBJm8s-ahufYmd8Ng';
 
 function App() {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('list');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('products');
-    if (saved) setProducts(JSON.parse(saved));
-    fetchApprovedProducts();
+    fetchProducts();
   }, []);
 
-  const fetchApprovedProducts = async () => {
+  const fetchProducts = async () => {
     try {
       setLoading(true);
+      setError('');
+
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Products_Display`;
       const res = await fetch(url);
       const text = await res.text();
-      const json = JSON.parse(text.substring(47).slice(0, -2));
-      const rows = json.table.rows;
 
-      if (rows && rows.length > 0) {
-        const sheetProducts = rows.map((row, index) => ({
-          id: `sheet-${index}`,
+      // Google wraps response in weird format - clean it
+      const jsonStr = text.substring(47).slice(0, -2);
+      const json = JSON.parse(jsonStr);
+      const rows = json.table?.rows || [];
+
+      if (rows.length > 0) {
+        const fetched = rows.map((row, i) => ({
+          id: `sheet-${i}`,
           name: row.c[0]?.v || '',
           price: row.c[1]?.v || '',
           category: row.c[2]?.v || '',
@@ -35,48 +39,24 @@ function App() {
           seoKeywords: row.c[4]?.v || '',
           features: '',
           status: 'Published',
-          timestamp: new Date().toLocaleString(),
-          source: 'sheet'
-        })).filter(p => p.name);
+          timestamp: new Date().toLocaleString()
+        })).filter(p => p.name !== '');
 
-        const saved = JSON.parse(localStorage.getItem('products') || '[]');
-        const localNames = saved.map(p => p.name.toLowerCase());
-        const newFromSheet = sheetProducts.filter(
-          p => !localNames.includes(p.name.toLowerCase())
-        );
-        const merged = [...saved, ...newFromSheet];
-        setProducts(merged);
-        localStorage.setItem('products', JSON.stringify(merged));
+        setProducts(fetched);
+      } else {
+        setProducts([]);
       }
     } catch (err) {
-      console.log('Sheet fetch note:', err.message);
+      setError('Could not load products. Make sure Google Sheet is public.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   const addProduct = (product) => {
-    const newProduct = {
-      ...product,
-      id: Date.now(),
-      status: 'Pending',
-      description: '',
-      seoKeywords: '',
-      timestamp: new Date().toLocaleString(),
-      source: 'local'
-    };
-    const updated = [newProduct, ...products];
-    setProducts(updated);
-    localStorage.setItem('products', JSON.stringify(updated));
+    alert(`✅ Product "${product.name}" noted!\n\nNow add this product to your Google Sheet:\n\nProduct Name: ${product.name}\nFeatures: ${product.features}\nPrice: ${product.price}\nCategory: ${product.category}\n\nAfter adding to sheet, n8n will auto-generate AI description and send approval email!`);
     setActiveTab('list');
-  };
-
-  const updateProduct = (id, updates) => {
-    const updated = products.map(p =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    setProducts(updated);
-    localStorage.setItem('products', JSON.stringify(updated));
   };
 
   return (
@@ -89,7 +69,7 @@ function App() {
       <nav className="nav">
         <button
           className={activeTab === 'list' ? 'active' : ''}
-          onClick={() => { setActiveTab('list'); fetchApprovedProducts(); }}
+          onClick={() => { setActiveTab('list'); fetchProducts(); }}
         >
           📋 View Products {loading && '⏳'}
         </button>
@@ -102,10 +82,17 @@ function App() {
       </nav>
 
       <main className="main">
+        {error && (
+          <div className="error-banner">⚠️ {error}</div>
+        )}
         {activeTab === 'add' ? (
           <AddProduct onAdd={addProduct} />
         ) : (
-          <ProductList products={products} onUpdate={updateProduct} />
+          <ProductList
+            products={products}
+            loading={loading}
+            onRefresh={fetchProducts}
+          />
         )}
       </main>
     </div>

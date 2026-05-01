@@ -1,28 +1,42 @@
 import React from 'react';
 import './ProductList.css';
 
-const STATUS_COLORS = {
-  'Pending': '#f6ad55',
-  'AI Generated': '#68d391',
-  'Approved': '#4299e1',
-  'Rejected': '#fc8181',
-  'Published': '#9f7aea'
-};
+function ProductList({ products, loading, onRefresh }) {
 
-function ProductList({ products, onUpdate }) {
+  if (loading) {
+    return (
+      <div className="empty">
+        <p>⏳ Loading products from Google Sheet...</p>
+      </div>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="empty">
-        <p>🛒 No products yet. Click "Add Product" to get started!</p>
+        <p>🛒 No published products yet.</p>
+        <p style={{marginTop:'10px', fontSize:'0.9rem', color:'#aaa'}}>
+          Add a product to Google Sheet → approve email → it appears here!
+        </p>
+        <button className="refresh-btn" onClick={onRefresh}>
+          🔄 Refresh
+        </button>
       </div>
     );
   }
 
   return (
     <div className="product-list">
-      <h2>Products ({products.length})</h2>
+      <div className="list-header">
+        <h2>Published Products ({products.length})</h2>
+        <button className="refresh-btn" onClick={onRefresh}>
+          🔄 Refresh
+        </button>
+      </div>
+
       {products.map(product => (
         <div key={product.id} className="product-card">
+
           <div className="card-header">
             <div>
               <h3>{product.name}</h3>
@@ -30,17 +44,8 @@ function ProductList({ products, onUpdate }) {
             </div>
             <div className="right">
               <span className="price">₹{product.price}</span>
-              <span
-                className="status"
-                style={{ background: STATUS_COLORS[product.status] || '#ccc' }}
-              >
-                {product.status}
-              </span>
+              <span className="status published">✅ Published</span>
             </div>
-          </div>
-
-          <div className="features">
-            <strong>Features:</strong> {product.features}
           </div>
 
           {product.description && (
@@ -61,9 +66,6 @@ function ProductList({ products, onUpdate }) {
             </div>
           )}
 
-          <div className="card-footer">
-            <span className="time">🕐 {product.timestamp}</span>
-          </div>
         </div>
       ))}
     </div>
